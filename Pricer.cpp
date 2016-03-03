@@ -12,16 +12,16 @@ using namespace std;
 
 typedef struct Order
 {
-  int id;
+  std::string id;
   char side;
   double price;
   int size;
 } Order;
 
-typedef std::pair<double, int> Pricepair; //<Price, Order-ID>
+typedef std::pair<double, std::string> Pricepair; //<Price, Order-ID>
 typedef std::pair<int,std::string> Orderpair; //<Size, Side>
 typedef std::vector<Pricepair> Pricevector;
-typedef std::map<int,Order> OrderMap;
+typedef std::map<std::string,Order> OrderMap;
 
 
 //Method to split line by delimiter and replace input vector with new vector
@@ -60,6 +60,7 @@ void print_result(OrderMap order_map, Pricevector vect, char side, double &money
   if (money == 0.0 && sum < target_size)
   {
     //Nothing to print
+    cout << "Value still below, sum=" << sum << endl;
   }
   else if (money != 0.0 && sum < target_size) //If value reduced to below SIZE
   {
@@ -95,6 +96,8 @@ void print_result(OrderMap order_map, Pricevector vect, char side, double &money
 int main(int argc, char *argv[]) {
   std::istringstream iss( argv[1] );
   int target_size;
+  iss >> target_size;
+  cout << "target_size=" << target_size << endl;
   int bid_sum = 0;
   int ask_sum = 0;
   double bid_expense = 0.0;
@@ -111,13 +114,15 @@ int main(int argc, char *argv[]) {
     {
       //Split string by whitespace, store vector in line_vect
       split(line,' ',line_vect);
+      // for (int i = 0; i < line_vect.size(); i++)
+      //   cout << line_vect[i] << endl;
       int timestamp = std::stoi(line_vect[0]);
       
       //If Add Order
       if (line_vect[1].compare("A") == 0)
       {
         Order temp_order;
-        temp_order.id = std::stoi(line_vect[2]);
+        temp_order.id = line_vect[2];
         temp_order.side = line_vect[3][0]; //[0] turns single element string into char??
         temp_order.price = std::stod(line_vect[4]);
         temp_order.size = std::stoi(line_vect[5]);
@@ -154,7 +159,7 @@ int main(int argc, char *argv[]) {
       else if (line_vect[1].compare("R") == 0)
       {
         //check [2], find order id
-        int temp_id = std::stoi(line_vect[2]);
+        string temp_id = line_vect[2];
         int temp_size = std::stoi(line_vect[3]);
         int current_size = order_map[temp_id].size;
         //If order is a Bid
@@ -196,12 +201,13 @@ int main(int argc, char *argv[]) {
       {
         cout << "Invalid input format for Add/Reduce" << endl;
       }
-      return 0;
     }
+    //return 0;
   }
   else
   {
     cout << "File not found" << endl;
-    return 0;
+    //return 0;
   }
+  return 0;
 }
