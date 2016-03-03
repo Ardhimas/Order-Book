@@ -19,12 +19,12 @@ typedef struct Order
 } Order;
 
 typedef std::pair<double, std::string> Pricepair; //<Price, Order-ID>
-typedef std::pair<int,std::string> Orderpair; //<Size, Side>
+typedef std::pair<int, std::string> Orderpair; //<Size, Side>
 typedef std::vector<Pricepair> Pricevector;
-typedef std::map<std::string,Order> OrderMap;
+typedef std::map<std::string, Order> OrderMap;
 
 
-//Method to split line by delimiter and replace input vector with new vector
+//Function to split message by a delimitor char and replace passed vector with new vector
 std::vector<std::string> split(const std::string &s, char delim, std::vector<std::string> &elems) {
     std::stringstream ss(s);
     std::string item;
@@ -35,10 +35,10 @@ std::vector<std::string> split(const std::string &s, char delim, std::vector<std
     }
     return elems;
 }
-  
+
+//Function to insert new price,id pairs into bid or ask vector, in descending or ascending order respectively  
 void ordered_insert(Pricevector &vect, Order order)
 {
-  //d is new price, true when vect val > new price
   auto descending_cmp =  [](Pricepair const & x, double d) -> bool
     { return x.first >= d; };//> OR >=? TODO
   auto ascending_cmp =  [](Pricepair const & x, double d) -> bool
@@ -63,13 +63,13 @@ void ordered_insert(Pricevector &vect, Order order)
 void print_result(OrderMap order_map, Pricevector vect, char side, double &money, int &sum, int target_size, int timestamp)
 {
   //cout << "Going into print_result" << endl;
-  //If sum still below target_size after addition/reduction
+  //If sum is still below target_size after addition/reduction
   if (money == 0.0 && sum < target_size)
   {
-    //Nothing to print, uncomment to debug
-    //cout << "Value still below, sum for " << side << " = " << sum << endl;
+    //Nothing to print, uncomment line below to debug
+    //cout << "Sum below target for side=" << side << ", sum=" << sum << endl;
   }
-  //If sum reduced to below target_size but previously above or equal
+  //If sum reduced to below target_size but previously above or equal, print NA
   else if (money != 0.0 && sum < target_size) 
   {
     money = 0.0;
@@ -89,7 +89,7 @@ void print_result(OrderMap order_map, Pricevector vect, char side, double &money
     
     while (counter > 0)
     {
-      //Count money through multiplying prices in order
+      //Determine expense/income through summing up price*size in ascending order of index
       for (Pricevector::iterator it = vect.begin(); it!= vect.end(); ++it)
       {
         temp_price = it->first;
@@ -101,31 +101,31 @@ void print_result(OrderMap order_map, Pricevector vect, char side, double &money
     }
     cout << timestamp << " " << side << " " << std::setprecision(2) << std::fixed << money << endl;
   }
-  //cout << "leaving print_Result" << endl;
 }
 
 //Main takes target_size as only command line input
 int main(int argc, char *argv[]) {
-  std::istringstream iss( argv[1] );
+  std::istringstream iss(argv[1]);
   int target_size;
-  iss >> target_size;
-  //cout << "target_size=" << target_size << endl;
+  if (!(iss >> target_size))
+    cerr << "Invalid argument " << argv[1] << endl;
   int bid_sum = 0;
   int ask_sum = 0;
-  double bid_expense = 0.00;
-  double ask_income = 0.00;
-  Pricevector bid;//[price][order-id] descending
-  Pricevector ask;//[price][order-id] ascending
-  OrderMap order_map;// key = order-id, val = <size, side>
+  double bid_expense = 0.0;
+  double ask_income = 0.0;
+  Pricevector bid;//Vector sorted in descending order of price
+  Pricevector ask;//Vcetor sorted in ascending order of price
+  OrderMap order_map;// Map where key = order-id, val = Order object
   std::vector<std::string> line_vect;
-  string line;
-  ifstream myfile ("shortinput.in"); //Modify this filename to use different inputs
-  if(myfile.is_open())
+  std::string line;
+  ifstream input_file ("shortinput.in"); //Modify this filename to use different inputs
+  if(input_file.is_open())
   {
-    while (getline(myfile,line))//there is a nextline:
+    while (getline(input_file,line)) //While there exists a next line:
     {
       //Split string by whitespace, store vector in line_vect
       split(line,' ',line_vect);
+      // Uncomment to debug message vector
       // for (int i = 0; i < line_vect.size(); i++)
       //   cout << line_vect[i] << endl;
       int timestamp = std::stoi(line_vect[0]);
@@ -136,24 +136,21 @@ int main(int argc, char *argv[]) {
         //Construct Order and add to map using order id as key
         Order temp_order;
         temp_order.id = line_vect[2];
-        temp_order.side = line_vect[3][0]; //[0] turns single element string into char
+        temp_order.side = line_vect[3][0]; //[0] extracts char from single element string
         temp_order.price = std::stod(line_vect[4]);
         temp_order.size = std::stoi(line_vect[5]);
-        order_map[temp_order.id] = temp_order;
+        order_map[temp_order.id] = temp_order; //Add Order to map
         
         if (temp_order.side == 'B')
         {
           ordered_insert(bid,temp_order);
           bid_sum += temp_order.size;
-          //call print function map, vector, 'B', bid_expense, bid_Sum
           print_result(order_map, bid, 'S', bid_expense, bid_sum, target_size, timestamp);
         }
         else if (temp_order.side == 'S')
         {
-          //insert price[4], id[2] to ask vector
           ordered_insert(ask,temp_order);
           ask_sum += temp_order.size;
-          //call print function map, vector, 'S', ask_income, ask_sum
           print_result(order_map, ask, 'B', ask_income, ask_sum, target_size, timestamp);
         }
         else
@@ -168,7 +165,7 @@ int main(int argc, char *argv[]) {
         int temp_size = std::stoi(line_vect[3]);
         int current_size = order_map[temp_id].size;
         
-        //If order is a Bid
+        //If order is a Bid, adjust bid_sum accordingly
         if (order_map[temp_id].side == 'B')
         {
           if (temp_size >= current_size)
@@ -181,10 +178,9 @@ int main(int argc, char *argv[]) {
             order_map[temp_id].size -= temp_size;
             bid_sum -= temp_size;
           }
-          //call print function map, vector, 'B', bid_expense, bid_sum
           print_result(order_map, bid, 'S', bid_expense, bid_sum, target_size, timestamp);
         }
-        //If order is an Ask
+        //If order is an Ask, adjust ask_sum accordingly
         else if (order_map[temp_id].side == 'S')
         {
           if (temp_size >= current_size)
@@ -209,12 +205,10 @@ int main(int argc, char *argv[]) {
         cout << "Invalid input format for Add/Reduce" << endl;
       }
     }
-    //return 0;
   }
   else
   {
     cout << "File not found" << endl;
-    //return 0;
   }
   return 0;
 }
